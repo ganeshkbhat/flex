@@ -1,0 +1,22 @@
+{
+  "name": "snack-counter-automation",
+  "version": "1.0.0",
+  "description": "Express and SQLite backend for snack counter automation",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7",
+    "ejs": "^3.1.10"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "mocha --reporter spec --recursive --timeout 60000"
+  },
+  "directories": {
+    "test": "./test"
+  },
+  "devDependencies": {
+    "chai": "^6.3.0",
+    "mocha": "^12.0.3"
+  }
+}

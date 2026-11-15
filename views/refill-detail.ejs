@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+
+<h1>Refill Ticket: <%= refill.id %></h1>
+
+<% if (message) { %><div class="alert success"><%= message %></div><% } %>
+<% if (error) { %><div class="alert error"><%= error %></div><% } %>
+
+<table>
+  <tbody>
+    <tr><th>Office</th><td><%= refill.office %></td></tr>
+    <tr><th>Refill Date</th><td><%= refill.refill_date %></td></tr>
+    <tr><th>Product ID</th><td><%= refill.product_id %></td></tr>
+    <tr><th>Estimated Cost</th><td><%= refill.estimated_cost %></td></tr>
+    <tr><th>Ticket Status</th><td><span class="badge" style="background: <%= refill.status === 'OPEN' ? '#dcfce7' : '#e5e7eb' %>;"><%= refill.status %></span></td></tr>
+    <tr><th>Assigned Volunteer</th><td><%= refill.assignee_name ? `${refill.assignee_name} (${refill.assignee_id})` : 'Unassigned' %></td></tr>
+    <tr><th>HR Claim ID</th><td><%= refill.hr_claim_id || 'Not submitted yet' %></td></tr>
+  </tbody>
+</table>
+
+<% if (!refill.assignee_id) { %>
+  <form class="card" action="/api/refills/<%= refill.id %>/claim" method="POST">
+    <h3>Assign / Claim This Refill</h3>
+    <div class="row">
+      <label>Select Volunteer (<%= refill.office %>)
+        <select name="employeeId" required>
+          <% volunteers.forEach(v => { %>
+            <option value="<%= v.employee_id %>"><%= v.name %> (<%= v.employee_id %>)</option>
+          <% }) %>
+        </select>
+      </label>
+    </div>
+    <button type="submit">Claim Refill</button>
+  </form>
+<% } else { %>
+  <div class="card">
+    <h3>Refill Details</h3>
+    <p>This refill ticket is currently assigned to <strong><%= refill.assignee_name %></strong> (<%= refill.assignee_id %>).</p>
+  </div>
+<% } %>
+
+<p><a href="/">&larr; Back to Dashboard</a></p>
+
+<%- include('partials/footer') %>

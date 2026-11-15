@@ -1,0 +1,114 @@
+<%- include('partials/header') %>
+
+<h1>Volunteers Management (CRUD)</h1>
+
+<% if (message) { %><div class="alert success"><%= message %></div><% } %>
+<% if (error) { %><div class="alert error"><%= error %></div><% } %>
+
+<form class="card" action="/api/volunteers" method="POST">
+  <h3>Add / Register Volunteer</h3>
+  <div class="row">
+    <label>Employee ID
+      <input type="text" name="employeeId" placeholder="EMP-001" required />
+    </label>
+    <label>Full Name
+      <input type="text" name="name" placeholder="Astrid" required />
+    </label>
+    <label>Home Office
+      <select name="homeOffice" required>
+        <option value="Oslo">Oslo</option>
+        <option value="Bengaluru">Bengaluru</option>
+      </select>
+    </label>
+    <label>Active Office Today
+      <select name="activeOffice" required>
+        <option value="Oslo">Oslo</option>
+        <option value="Bengaluru">Bengaluru</option>
+      </select>
+    </label>
+    <label>Payroll Currency
+      <select name="payrollCurrency" required>
+        <option value="NOK">NOK</option>
+        <option value="INR">INR</option>
+      </select>
+    </label>
+  </div>
+  <button type="submit">Save Volunteer</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Employee ID</th>
+      <th>Name</th>
+      <th>Home Office</th>
+      <th>Active Office</th>
+      <th>Payroll</th>
+      <th>Completed Refills</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (volunteers.length === 0) { %>
+      <tr><td colspan="7">No volunteers registered yet.</td></tr>
+    <% } %>
+    <% volunteers.forEach(v => { %>
+      <tr>
+        <td><strong><%= v.employee_id %></strong></td>
+        <td><input type="text" id="name-<%= v.employee_id %>" value="<%= v.name %>" /></td>
+        <td>
+          <select id="home-<%= v.employee_id %>">
+            <option value="Oslo" <%= v.home_office === 'Oslo' ? 'selected' : '' %>>Oslo</option>
+            <option value="Bengaluru" <%= v.home_office === 'Bengaluru' ? 'selected' : '' %>>Bengaluru</option>
+          </select>
+        </td>
+        <td>
+          <select id="active-<%= v.employee_id %>">
+            <option value="Oslo" <%= v.active_office === 'Oslo' ? 'selected' : '' %>>Oslo</option>
+            <option value="Bengaluru" <%= v.active_office === 'Bengaluru' ? 'selected' : '' %>>Bengaluru</option>
+          </select>
+        </td>
+        <td>
+          <select id="curr-<%= v.employee_id %>">
+            <option value="NOK" <%= v.payroll_currency === 'NOK' ? 'selected' : '' %>>NOK</option>
+            <option value="INR" <%= v.payroll_currency === 'INR' ? 'selected' : '' %>>INR</option>
+          </select>
+        </td>
+        <td><%= v.completed_count %></td>
+        <td>
+          <button type="button" onclick="updateVolunteer('<%= v.employee_id %>')">Update</button>
+          <button type="button" class="danger" onclick="deleteVolunteer('<%= v.employee_id %>')">Delete</button>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<script>
+  async function updateVolunteer(employeeId) {
+    const res = await fetch('/api/volunteers/' + employeeId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('name-' + employeeId).value,
+        homeOffice: document.getElementById('home-' + employeeId).value,
+        activeOffice: document.getElementById('active-' + employeeId).value,
+        payrollCurrency: document.getElementById('curr-' + employeeId).value
+      })
+    });
+    if (res.ok) window.location = '/views/volunteers?message=Volunteer+updated';
+    else alert((await res.json()).error);
+  }
+
+  async function deleteVolunteer(employeeId) {
+    if (!confirm('Delete volunteer ' + employeeId + '?')) return;
+    const res = await fetch('/api/volunteers/' + employeeId, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) window.location = '/views/volunteers?message=Volunteer+deleted';
+    else alert((await res.json()).error);
+  }
+</script>
+
+<%- include('partials/footer') %>

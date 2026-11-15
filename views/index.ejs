@@ -1,0 +1,79 @@
+<%- include('partials/header') %>
+
+<h1>Snack Counter Dashboard</h1>
+
+<h2>All Refill Tickets</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Refill ID</th>
+      <th>Refill Date</th>
+      <th>Office</th>
+      <th>Product</th>
+      <th>Est. Cost</th>
+      <th>Ticket Status</th>
+      <th>HR Status</th>
+      <th>Date Closed</th>
+      <th>Assignee</th>
+      <th>HR Claim ID</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (refills.length === 0) { %>
+      <tr><td colspan="11">No refills recorded yet. <a href="/views/report-empty">Report an empty box</a>.</td></tr>
+    <% } %>
+    <% refills.forEach(r => { %>
+      <tr>
+        <td><strong><%= r.id %></strong></td>
+        <td><%= r.refill_date %></td>
+        <td><%= r.office %></td>
+        <td><%= r.product_name || '-' %></td>
+        <td><%= r.estimated_cost ?? '-' %></td>
+        <td><span class="badge" style="background: <%= r.status === 'OPEN' ? '#dcfce7' : '#e5e7eb' %>;"><%= r.status %></span></td>
+        <td>
+          <% if (r.hr_claim_id) { %>
+            <span class="badge" style="background: <%= r.hr_status === 'APPROVED' || r.hr_status === 'REIMBURSED' ? '#dcfce7' : (r.hr_status === 'REJECTED' ? '#fee2e2' : '#fef9c3') %>;">
+              <%= r.hr_status || 'PENDING' %>
+            </span>
+          <% } else { %>
+            -
+          <% } %>
+        </td>
+        <td>
+          <% if (r.closed_at) { %>
+            <%= new Date(r.closed_at).toISOString().slice(0, 10) %>
+          <% } else { %>
+            -
+          <% } %>
+        </td>
+        <td><%= r.assignee_name ? `${r.assignee_name} (${r.assignee_id})` : 'Unassigned' %></td>
+        <td><%= r.hr_claim_id || '-' %></td>
+        <td><a href="/views/refills/<%= r.id %>">View</a></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<h2>Recent Simulated Chat Notifications</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Recipient Employee ID</th>
+      <th>Message</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (chatNotifications.length === 0) { %>
+      <tr><td colspan="2">No notifications sent yet.</td></tr>
+    <% } %>
+    <% chatNotifications.slice(-10).reverse().forEach(n => { %>
+      <tr>
+        <td><%= n.employeeId %></td>
+        <td><%= n.text %></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>

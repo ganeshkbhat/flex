@@ -1,0 +1,103 @@
+<%- include('partials/header') %>
+
+<h1>Snack Box Types & Standard Costs</h1>
+<p>Maps to <code>GET /api/box-types</code>, <code>POST /api/box-types</code>, <code>PUT /api/box-types/:id</code>, and <code>DELETE /api/box-types/:id</code>.</p>
+
+<% if (message) { %><div class="alert success"><%= message %></div><% } %>
+<% if (error) { %><div class="alert error"><%= error %></div><% } %>
+
+<form class="card" action="/api/box-types" method="POST">
+  <h3>Add New Snack Box Type</h3>
+  <div class="row">
+    <label>Box Name
+      <input type="text" name="name" placeholder="Standard Fruit & Nut Box" required />
+    </label>
+    <label>Office
+      <select name="office" required>
+        <option value="Oslo">Oslo</option>
+        <option value="Bengaluru">Bengaluru</option>
+        <option value="GLOBAL">GLOBAL</option>
+      </select>
+    </label>
+    <label>Standard Cost
+      <input type="number" step="0.01" name="standardCost" placeholder="800" required />
+    </label>
+    <label>Currency
+      <select name="currency" required>
+        <option value="NOK">NOK</option>
+        <option value="INR">INR</option>
+      </select>
+    </label>
+  </div>
+  <button type="submit">Create Box Type</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Office</th>
+      <th>Standard Cost</th>
+      <th>Currency</th>
+      <th>Actions (PUT / DELETE)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (boxTypes.length === 0) { %>
+      <tr><td colspan="6">No snack box types configured yet.</td></tr>
+    <% } %>
+    <% boxTypes.forEach(b => { %>
+      <tr>
+        <td><%= b.id %></td>
+        <td><input type="text" id="name-<%= b.id %>" value="<%= b.name %>" /></td>
+        <td>
+          <select id="office-<%= b.id %>">
+            <option value="Oslo" <%= b.office === 'Oslo' ? 'selected' : '' %>>Oslo</option>
+            <option value="Bengaluru" <%= b.office === 'Bengaluru' ? 'selected' : '' %>>Bengaluru</option>
+            <option value="GLOBAL" <%= b.office === 'GLOBAL' ? 'selected' : '' %>>GLOBAL</option>
+          </select>
+        </td>
+        <td><input type="number" step="0.01" id="cost-<%= b.id %>" value="<%= b.standard_cost %>" /></td>
+        <td>
+          <select id="curr-<%= b.id %>">
+            <option value="NOK" <%= b.currency === 'NOK' ? 'selected' : '' %>>NOK</option>
+            <option value="INR" <%= b.currency === 'INR' ? 'selected' : '' %>>INR</option>
+          </select>
+        </td>
+        <td>
+          <button type="button" onclick="updateBox(<%= b.id %>)">Update</button>
+          <button type="button" class="danger" onclick="deleteBox(<%= b.id %>)">Delete</button>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<script>
+  async function updateBox(id) {
+    const res = await fetch('/api/box-types/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('name-' + id).value,
+        office: document.getElementById('office-' + id).value,
+        standardCost: Number(document.getElementById('cost-' + id).value),
+        currency: document.getElementById('curr-' + id).value
+      })
+    });
+    if (res.ok) window.location = '/views/box-types?message=Box+type+updated';
+    else alert((await res.json()).error);
+  }
+
+  async function deleteBox(id) {
+    const res = await fetch('/api/box-types/' + id, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) window.location = '/views/box-types?message=Box+type+deleted';
+    else alert((await res.json()).error);
+  }
+</script>
+
+<%- include('partials/footer') %>

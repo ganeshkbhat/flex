@@ -1,0 +1,101 @@
+<%- include('partials/header') %>
+
+<h1>Consolidated Monthly Spend Report</h1>
+
+<form class="card" action="/views/reports/monthly" method="GET">
+  <div class="row">
+    <label>Select Billing Month (YYYY-MM)
+      <input type="text" name="billingMonth" value="<%= billingMonth %>" required />
+    </label>
+  </div>
+  <button type="submit">Load Report</button>
+</form>
+
+<h2>Office Budget Summary (<%= billingMonth %>)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Office</th>
+      <th>Spent (Local)</th>
+      <th>Monthly Cap (Local)</th>
+      <th>Spent (Consolidated NOK)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Oslo</td>
+      <td><%= byOffice.Oslo.spentLocal %> <%= byOffice.Oslo.currency %></td>
+      <td><%= byOffice.Oslo.budgetLocal %> <%= byOffice.Oslo.currency %></td>
+      <td><%= byOffice.Oslo.spentNok %> NOK</td>
+    </tr>
+    <tr>
+      <td>Bengaluru</td>
+      <td><%= byOffice.Bengaluru.spentLocal %> <%= byOffice.Bengaluru.currency %></td>
+      <td><%= byOffice.Bengaluru.budgetLocal %> <%= byOffice.Bengaluru.currency %></td>
+      <td><%= byOffice.Bengaluru.spentNok %> NOK</td>
+    </tr>
+    <tr>
+      <th colspan="3">Total Company Snack Spend (NOK)</th>
+      <th><%= totalCompanySpendNok %> NOK</th>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Spend by Product (NOK)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Product Name</th>
+      <th>Total Spend (NOK)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% const prodNames = Object.keys(productTotalsNok); %>
+    <% if (prodNames.length === 0) { %>
+      <tr><td colspan="2">No expenses recorded for this month.</td></tr>
+    <% } %>
+    <% prodNames.forEach(name => { %>
+      <tr>
+        <td><%= name %></td>
+        <td><%= productTotalsNok[name] %> NOK</td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<h2>Itemized Refill Claims</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Refill ID</th>
+      <th>Refill Date</th>
+      <th>Office</th>
+      <th>Employee</th>
+      <th>Product</th>
+      <th>Price x Qty</th>
+      <th>Local Spend</th>
+      <th>Payroll Reimbursement</th>
+      <th>NOK Equivalent</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (expenses.length === 0) { %>
+      <tr><td colspan="9">No expenses recorded for this month.</td></tr>
+    <% } %>
+    <% expenses.forEach(e => { %>
+      <tr>
+        <td><%= e.refill_id %></td>
+        <td><%= e.refill_date %></td>
+        <td><%= e.office %></td>
+        <td><%= e.employee_id %></td>
+        <td><%= e.product_name %></td>
+        <td><%= e.product_price %> x <%= e.product_quantity %></td>
+        <td><%= e.local_amount %> <%= e.local_currency %></td>
+        <td><%= e.payroll_amount %> <%= e.payroll_currency %></td>
+        <td><%= e.nok_amount %> NOK</td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<%- include('partials/footer') %>
