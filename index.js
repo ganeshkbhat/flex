@@ -9,8 +9,9 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-const db = new sqlite3.Database('snack_counter.db', (err) => {
-  if (err) console.error('Error opening database', err.message);
+const dbPath = process.env.NODE_ENV === 'test' ? ':memory:' : 'snack_counter.db';
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err && process.env.NODE_ENV !== 'test') console.error('Error opening database', err.message);
   else console.log('Connected to the SQLite database.');
 });
 
@@ -529,4 +530,8 @@ app.post('/api/offices/empty', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Snack Automation API & Views running on http://localhost:${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`Snack Automation API & Views running on http://localhost:${PORT}`));
+}
+
+module.exports = { app, db };
