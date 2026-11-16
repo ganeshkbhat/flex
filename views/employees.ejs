@@ -1,0 +1,144 @@
+<%- include('partials/header') %>
+
+<h1>Employees Management (Admin Portal)</h1>
+
+<% if (message) { %><div class="alert success"><%= message %></div><% } %>
+<% if (error) { %><div class="alert error"><%= error %></div><% } %>
+
+<form class="card" action="/api/employees" method="POST">
+  <h3>Add New Employee</h3>
+  <div class="row">
+    <label>Employee ID
+      <input type="text" name="employeeId" placeholder="EMP-001" required />
+    </label>
+    <label>Full Name
+      <input type="text" name="name" placeholder="Astrid Hansen" required />
+    </label>
+    <label>Email Address
+      <input type="email" name="email" placeholder="astrid@snack.com" required />
+    </label>
+    <label>Password
+      <input type="password" name="password" placeholder="••••••••" required />
+    </label>
+    <label>Home Office
+      <select name="homeOffice" required>
+        <option value="Oslo">Oslo</option>
+        <option value="Bengaluru">Bengaluru</option>
+      </select>
+    </label>
+    <label>Active Office
+      <select name="activeOffice" required>
+        <option value="Oslo">Oslo</option>
+        <option value="Bengaluru">Bengaluru</option>
+      </select>
+    </label>
+    <label>Payroll Currency
+      <select name="payrollCurrency" required>
+        <option value="NOK">NOK</option>
+        <option value="INR">INR</option>
+      </select>
+    </label>
+  </div>
+  <div class="row" style="margin-top: 0.5rem; gap: 1.5rem;">
+    <label style="flex-direction: row; align-items: center; gap: 0.5rem;">
+      <input type="checkbox" name="isAdmin" /> Admin Role (`is_admin`)
+    </label>
+    <label style="flex-direction: row; align-items: center; gap: 0.5rem;">
+      <input type="checkbox" name="isHr" /> HR Role (`is_hr`)
+    </label>
+    <label style="flex-direction: row; align-items: center; gap: 0.5rem;">
+      <input type="checkbox" name="isVolunteer" /> Volunteer Role (`is_volunteer`)
+    </label>
+  </div>
+  <button type="submit" style="margin-top: 1rem;">Create Employee</button>
+</form>
+
+<h2>Registered Employees List</h2>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name & Email</th>
+      <th>Roles (Admin / HR / Volunteer)</th>
+      <th>Offices</th>
+      <th>Payroll</th>
+      <th>Completed Refills</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (employees.length === 0) { %>
+      <tr><td colspan="7">No employees registered.</td></tr>
+    <% } %>
+    <% employees.forEach(e => { %>
+      <tr>
+        <td><strong><%= e.employee_id %></strong></td>
+        <td>
+          <input type="text" id="name-<%= e.employee_id %>" value="<%= e.name %>" style="margin-bottom: 0.25rem; width: 100%;" /><br>
+          <input type="email" id="email-<%= e.employee_id %>" value="<%= e.email %>" style="font-size: 0.8rem; width: 100%;" />
+        </td>
+        <td>
+          <div style="display: flex; gap: 0.75rem; font-size: 0.85rem;">
+            <label><input type="checkbox" id="admin-<%= e.employee_id %>" <%= e.is_admin ? 'checked' : '' %> /> Admin</label>
+            <label><input type="checkbox" id="hr-<%= e.employee_id %>" <%= e.is_hr ? 'checked' : '' %> /> HR</label>
+            <label><input type="checkbox" id="vol-<%= e.employee_id %>" <%= e.is_volunteer ? 'checked' : '' %> /> Volunteer</label>
+          </div>
+        </td>
+        <td>
+          Home: <select id="home-<%= e.employee_id %>" style="margin-bottom:0.2rem;">
+            <option value="Oslo" <%= e.home_office === 'Oslo' ? 'selected' : '' %>>Oslo</option>
+            <option value="Bengaluru" <%= e.home_office === 'Bengaluru' ? 'selected' : '' %>>Bengaluru</option>
+          </select><br>
+          Active: <select id="active-<%= e.employee_id %>">
+            <option value="Oslo" <%= e.active_office === 'Oslo' ? 'selected' : '' %>>Oslo</option>
+            <option value="Bengaluru" <%= e.active_office === 'Bengaluru' ? 'selected' : '' %>>Bengaluru</option>
+          </select>
+        </td>
+        <td>
+          <select id="curr-<%= e.employee_id %>">
+            <option value="NOK" <%= e.payroll_currency === 'NOK' ? 'selected' : '' %>>NOK</option>
+            <option value="INR" <%= e.payroll_currency === 'INR' ? 'selected' : '' %>>INR</option>
+          </select>
+        </td>
+        <td style="text-align: center;"><%= e.completed_count %></td>
+        <td>
+          <button type="button" onclick="updateEmployee('<%= e.employee_id %>')">Update</button>
+          <button type="button" class="danger" onclick="deleteEmployee('<%= e.employee_id %>')">Delete</button>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+
+<script>
+  async function updateEmployee(employeeId) {
+    const res = await fetch('/api/employees/' + employeeId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('name-' + employeeId).value,
+        email: document.getElementById('email-' + employeeId).value,
+        isAdmin: document.getElementById('admin-' + employeeId).checked,
+        isHr: document.getElementById('hr-' + employeeId).checked,
+        isVolunteer: document.getElementById('vol-' + employeeId).checked,
+        homeOffice: document.getElementById('home-' + employeeId).value,
+        activeOffice: document.getElementById('active-' + employeeId).value,
+        payrollCurrency: document.getElementById('curr-' + employeeId).value
+      })
+    });
+    if (res.ok) window.location = '/views/employees?message=Employee+updated';
+    else alert((await res.json()).error);
+  }
+
+  async function deleteEmployee(employeeId) {
+    if (!confirm('Delete employee ' + employeeId + '?')) return;
+    const res = await fetch('/api/employees/' + employeeId, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) window.location = '/views/employees?message=Employee+deleted';
+    else alert((await res.json()).error);
+  }
+</script>
+
+<%- include('partials/footer') %>

@@ -1,183 +1,196 @@
-# Snack Counter Reimbursement System - REST API Documentation
+# Snack Counter Automation & API Reference
 
-This document outlines all available REST API endpoints defined in `index.js` for managing products, volunteers, snack refill claims, budget tracking, and HR status workflows.
+Welcome to the **Snack Counter & Office Reimbursement System** API documentation. This guide outlines all available REST API endpoints, their usage, required roles, and sample `curl` commands.
 
 ---
 
-## 1. Product Management APIs
+## Table of Contents
+1. [Authentication & Session APIs](#1-authentication--session-apis)
+2. [Product Management APIs (Admin Only)](#2-product-management-apis-admin-only)
+3. [Employee Management APIs (Admin Only)](#3-employee-management-apis-admin-only)
+4. [Empty Box Triggers & Refill Workflows](#4-empty-box-triggers--refill-workflows)
+5. [HR Claims & Refill Ticket Management (HR / Admin)](#5-hr-claims--refill-ticket-management-hr--admin)
 
-### Add New Product
-* **Endpoint:** `POST /api/products`
-* **Content-Type:** `application/json` or `application/x-www-form-urlencoded`
-* **Description:** Creates a new snack product. Can optionally set it as the default product.
-* **Payload Fields:**
-  * `name` (string, required): Unique product name.
-  * `office` (string, required): Region scope (`GLOBAL`, `Oslo`, `Bengaluru`).
-  * `unitPrice` (number, required): Price per unit.
-  * `currency` (string, required): Currency code (`NOK`, `INR`).
-  * `isDefault` (boolean/checkbox, optional): Set to `true` or `on` to make it default.
-* **cURL Command:**
+---
+
+## 1. Authentication & Session APIs
+
+### Login
+* **Description:** Authenticates an existing user with email and password, returning a session token and setting a session cookie.
+* **Method & Endpoint:** `POST /api/login`
+* **Sample cURL:**
+  ```bash
+  curl -X POST http://localhost:3000/api/login \
+    -H "Content-Type: application/json" \
+    -d '{"email": "admin@snack.com", "password": "admin123"}'
+  ```
+
+### Register
+* **Description:** Registers a new employee user account in the system.
+* **Method & Endpoint:** `POST /api/register`
+* **Sample cURL:**
+  ```bash
+  curl -X POST http://localhost:3000/api/register \
+    -H "Content-Type: application/json" \
+    -d '{"employeeId": "EMP-002", "name": "Jane Doe", "email": "jane@snack.com", "password": "password123", "homeOffice": "Oslo", "activeOffice": "Oslo", "payrollCurrency": "NOK"}'
+  ```
+
+### Update Password
+* **Description:** Updates the logged-in user's account password.
+* **Method & Endpoint:** `POST /api/profile/password`
+* **Sample cURL:**
+  ```bash
+  curl -X POST http://localhost:3000/api/profile/password \
+    -H "Content-Type: application/json" \
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"currentPassword": "password123", "newPassword": "newpassword456"}'
+  ```
+
+---
+
+## 2. Product Management APIs (Admin Only)
+
+### Create Product
+* **Description:** Adds a new snack box product configuration with pricing and office assignment.
+* **Method & Endpoint:** `POST /api/products`
+* **Sample cURL:**
   ```bash
   curl -X POST http://localhost:3000/api/products \
     -H "Content-Type: application/json" \
-    -d '{"name": "Organic Fruit Box", "office": "Oslo", "unitPrice": 450, "currency": "NOK", "isDefault": false}'
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"name": "Chocolate Snack Box", "office": "Oslo", "unitPrice": 450, "currency": "NOK", "isDefault": 0}'
   ```
 
 ### Update Product
-* **Endpoint:** `PUT /api/products/:id`
-* **Content-Type:** `application/json`
-* **Description:** Updates an existing snack product by its ID.
-* **URL Params:** `id` (integer)
-* **Payload Fields:** `name`, `office`, `unitPrice`, `currency`, `isDefault`
-* **cURL Command:**
+* **Description:** Modifies an existing snack box product.
+* **Method & Endpoint:** `PUT /api/products/:id`
+* **Sample cURL:**
   ```bash
   curl -X PUT http://localhost:3000/api/products/1 \
     -H "Content-Type: application/json" \
-    -d '{"name": "Assorted Snack Box XL", "office": "GLOBAL", "unitPrice": 650, "currency": "NOK", "isDefault": true}'
-  ```
-
-### Set Default Product
-* **Endpoint:** `POST /api/products/:id/set-default`
-* **Description:** Marks a specific product as default and clears previous defaults.
-* **URL Params:** `id` (integer)
-* **cURL Command:**
-  ```bash
-  curl -X POST http://localhost:3000/api/products/1/set-default
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"name": "Assorted Snack Box (Updated)", "office": "GLOBAL", "unitPrice": 650, "currency": "NOK", "isDefault": 1}'
   ```
 
 ### Delete Product
-* **Endpoint:** `DELETE /api/products/:id`
-* **Description:** Deletes a product by its ID.
-* **URL Params:** `id` (integer)
-* **cURL Command:**
+* **Description:** Deletes a snack box product by ID.
+* **Method & Endpoint:** `DELETE /api/products/:id`
+* **Sample cURL:**
   ```bash
   curl -X DELETE http://localhost:3000/api/products/1 \
-    -H "Accept: application/json"
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN"
   ```
 
 ---
 
-## 2. Volunteer Management APIs
+## 3. Employee Management APIs (Admin Only)
 
-### Register or Update Volunteer (Upsert)
-* **Endpoint:** `POST /api/volunteers`
-* **Content-Type:** `application/json`
-* **Description:** Registers a new volunteer or updates them if the employee ID already exists.
-* **Payload Fields:**
-  * `employeeId` (string, required): Unique identifier (e.g., `EMP-001`).
-  * `name` (string, required): Full name.
-  * `homeOffice` (string, required): Home office (`Oslo`, `Bengaluru`).
-  * `activeOffice` (string, required): Current working office.
-  * `payrollCurrency` (string, required): Payroll currency (`NOK`, `INR`).
-* **cURL Command:**
+### Create or Upsert Employee
+* **Description:** Creates a new employee record or updates existing roles (Admin, HR, Volunteer, offices, payroll currency).
+* **Method & Endpoint:** `POST /api/employees`
+* **Sample cURL:**
   ```bash
-  curl -X POST http://localhost:3000/api/volunteers \
+  curl -X POST http://localhost:3000/api/employees \
     -H "Content-Type: application/json" \
-    -d '{"employeeId": "EMP-001", "name": "Astrid", "homeOffice": "Oslo", "activeOffice": "Oslo", "payrollCurrency": "NOK"}'
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"employeeId": "EMP-003", "name": "Bob Smith", "email": "bob@snack.com", "password": "pass", "isVolunteer": 1, "homeOffice": "Bengaluru", "activeOffice": "Bengaluru", "payrollCurrency": "INR"}'
   ```
 
-### Update Volunteer Details
-* **Endpoint:** `PUT /api/volunteers/:employeeId`
-* **Content-Type:** `application/json`
-* **Description:** Updates volunteer profile details.
-* **URL Params:** `employeeId` (string)
-* **Payload Fields:** `name`, `homeOffice`, `activeOffice`, `payrollCurrency`
-* **cURL Command:**
+### Update Employee Details
+* **Description:** Updates role flags and office/currency settings for an employee.
+* **Method & Endpoint:** `PUT /api/employees/:employeeId`
+* **Sample cURL:**
   ```bash
-  curl -X PUT http://localhost:3000/api/volunteers/EMP-001 \
+  curl -X PUT http://localhost:3000/api/employees/EMP-003 \
     -H "Content-Type: application/json" \
-    -d '{"name": "Astrid Lindgren", "homeOffice": "Oslo", "activeOffice": "Oslo", "payrollCurrency": "NOK"}'
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"name": "Bob Smith Jr.", "email": "bob@snack.com", "isHr": 1, "homeOffice": "Bengaluru", "activeOffice": "Bengaluru", "payrollCurrency": "INR"}'
   ```
 
-### Delete Volunteer
-* **Endpoint:** `DELETE /api/volunteers/:employeeId`
-* **Description:** Removes a volunteer profile.
-* **URL Params:** `employeeId` (string)
-* **cURL Command:**
+### Delete Employee
+* **Description:** Removes an employee record from the system.
+* **Method & Endpoint:** `DELETE /api/employees/:employeeId`
+* **Sample cURL:**
   ```bash
-  curl -X DELETE http://localhost:3000/api/volunteers/EMP-001 \
-    -H "Accept: application/json"
+  curl -X DELETE http://localhost:3000/api/employees/EMP-003 \
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN"
   ```
 
 ---
 
-## 3. Refill Orders & Empty Box Reporting APIs
+## 4. Empty Box Triggers & Refill Workflows
 
-### Report Empty Box & Raise Claim
-* **Endpoint:** `POST /api/offices/empty` (or `POST /api/offices/:office/empty`)
-* **Content-Type:** `application/json`
-* **Description:** Reports an empty snack box, validates regional monthly budgets (Oslo: 6,000 NOK, Bengaluru: 15,000 INR), generates unique `refillId` and `hrClaimId`, records expenses, and logs an initial `PENDING` HR status.
-* **Payload Fields:**
-  * `office` (string): `Oslo` or `Bengaluru`.
-  * `refillDate` (string): Date in `YYYY-MM-DD` format.
-  * `productId` (integer): ID of the snack product.
-  * `productPrice` (number): Unit price paid.
-  * `productQuantity` (integer): Quantity purchased.
-  * `assigneeId` (string): Volunteer employee ID.
-  * `receiptImage` (string): Base64-encoded string of the receipt image.
-* **cURL Command:**
+### Report Empty Box Trigger
+* **Description:** Allows any employee to report an empty snack box in their office.
+* **Method & Endpoint:** `POST /api/offices/empty-trigger`
+* **Sample cURL:**
+  ```bash
+  curl -X POST http://localhost:3000/api/offices/empty-trigger \
+    -H "Content-Type: application/json" \
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"office": "Oslo", "productId": 1, "refillDate": "2026-06-06"}'
+  ```
+
+### Raise Direct Refill & Reimbursement Claim
+* **Description:** Allows volunteers to file a direct purchase claim with receipt data and validates against regional budgets.
+* **Method & Endpoint:** `POST /api/offices/empty`
+* **Sample cURL:**
   ```bash
   curl -X POST http://localhost:3000/api/offices/empty \
     -H "Content-Type: application/json" \
-    -d '{"office": "Oslo", "refillDate": "2026-06-06", "productId": 1, "productPrice": 600, "productQuantity": 2, "assigneeId": "EMP-001", "receiptImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="}'
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"office": "Oslo", "refillDate": "2026-06-06", "productId": 1, "productPrice": 500, "productQuantity": 1, "assigneeId": "EMP-ADM", "receiptImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="}'
   ```
 
-### Claim an Open Refill Ticket
-* **Endpoint:** `POST /api/refills/:id/claim`
-* **Content-Type:** `application/json`
-* **Description:** Assigns an open refill ticket to a volunteer.
-* **URL Params:** `id` (string, e.g., `RFL-1`)
-* **Payload Fields:** `employeeId`, `ttlMs` (optional expiration TTL in milliseconds)
-* **cURL Command:**
+### Claim Existing Trigger & Raise Refill
+* **Description:** Allows volunteers to claim an open empty box trigger and submit a refill claim.
+* **Method & Endpoint:** `POST /api/offices/claim-trigger`
+* **Sample cURL:**
   ```bash
-  curl -X POST http://localhost:3000/api/refills/RFL-1/claim \
+  curl -X POST http://localhost:3000/api/offices/claim-trigger \
     -H "Content-Type: application/json" \
-    -d '{"employeeId": "EMP-001"}'
-  ```
-
-### Delete Refill Ticket
-* **Endpoint:** `DELETE /api/refills/:id`
-* **Description:** Deletes a refill ticket order by ID.
-* **URL Params:** `id` (string)
-* **cURL Command:**
-  ```bash
-  curl -X DELETE http://localhost:3000/api/refills/RFL-1 \
-    -H "Accept: application/json"
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"office": "Oslo", "triggerId": 1, "productId": 1, "productPrice": 500, "productQuantity": 1, "assigneeId": "EMP-ADM", "receiptImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="}'
   ```
 
 ---
 
-## 4. HR Status & Workflow APIs
+## 5. HR Claims & Refill Ticket Management (HR / Admin)
 
-### Approve HR Claim
-* **Endpoint:** `POST /api/hr/claims/:claimId/approve`
-* **Description:** Approves an HR claim, sets HR status to `APPROVED`, maps ticket status to `OPEN`, and clears any close timestamps.
-* **URL Params:** `claimId` (string)
-* **cURL Command:**
-  ```bash
-  curl -X POST http://localhost:3000/api/hr/claims/HR-1717770000000-123/approve \
-    -H "Accept: application/json"
-  ```
-
-### Reject HR Claim
-* **Endpoint:** `POST /api/hr/claims/:claimId/reject`
-* **Description:** Rejects an HR claim, sets HR status to `REJECTED`, maps ticket status to `CLOSED`, and records the `closed_at` timestamp.
-* **URL Params:** `claimId` (string)
-* **cURL Command:**
-  ```bash
-  curl -X POST http://localhost:3000/api/hr/claims/HR-1717770000000-123/reject \
-    -H "Accept: application/json"
-  ```
-
-### Manual HR Status Override
-* **Endpoint:** `POST /api/refills/:id/hr-status`
-* **Content-Type:** `application/json`
-* **Description:** Manually overrides HR status (`PENDING`, `APPROVED`, `REIMBURSED`, `REJECTED`). Automatically calculates corresponding ticket status (`OPEN` vs `CLOSED`) and updates `closed_at` timestamps accordingly.
-* **URL Params:** `id` (string, Refill ID)
-* **Payload Fields:** `hrStatus` (`PENDING` | `APPROVED` | `REIMBURSED` | `REJECTED`)
-* **cURL Command:**
+### Update HR Status via Refill ID
+* **Description:** Updates the HR workflow state (`PENDING`, `APPROVED`, `REIMBURSED`, `REJECTED`) for a specific refill ticket.
+* **Method & Endpoint:** `POST /api/refills/:id/hr-status`
+* **Sample cURL:**
   ```bash
   curl -X POST http://localhost:3000/api/refills/RFL-1/hr-status \
     -H "Content-Type: application/json" \
-    -d '{"hrStatus": "REIMBURSED"}'
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN" \
+    -d '{"hrStatus": "APPROVED"}'
+  ```
+
+### Approve HR Claim
+* **Description:** Directly approves an HR reimbursement claim by claim ID.
+* **Method & Endpoint:** `POST /api/hr/claims/:claimId/approve`
+* **Sample cURL:**
+  ```bash
+  curl -X POST http://localhost:3000/api/hr/claims/HR-1717000000000-123/approve \
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN"
+  ```
+
+### Reject HR Claim
+* **Description:** Rejects an HR reimbursement claim by claim ID.
+* **Method & Endpoint:** `POST /api/hr/claims/:claimId/reject`
+* **Sample cURL:**
+  ```bash
+  curl -X POST http://localhost:3000/api/hr/claims/HR-1717000000000-123/reject \
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN"
+  ```
+
+### Delete Refill Ticket
+* **Description:** Deletes a refill ticket entry from the system.
+* **Method & Endpoint:** `DELETE /api/refills/:id`
+* **Sample cURL:**
+  ```bash
+  curl -X DELETE http://localhost:3000/api/refills/RFL-1 \
+    -H "Cookie: sessionToken=YOUR_SESSION_TOKEN"
   ```

@@ -1,226 +1,116 @@
 <%- include('partials/header') %>
 
-<h1>Report an Empty Snack Box & Claim Refill</h1>
-<p>Select the snack box product from the dropdown, specify price, quantity, volunteer, upload bill image, and submit.</p>
+<h1>Report an Empty Snack Box Trigger</h1>
+<p>Any employee can report an empty snack box. Volunteers, HR, and Admins can view these triggers and process box refills.</p>
 
 <% if (message) { %><div class="alert success"><%= message %></div><% } %>
 <% if (error) { %><div class="alert error"><%= error %></div><% } %>
 
-<form class="card" action="/api/offices/empty" method="POST" id="emptyBoxForm" onsubmit="return handleFormSubmit(event)">
-  <input type="hidden" name="receiptImage" id="receiptImageBase64" />
+<!-- Any employee can report an empty box trigger -->
+<% if (currentUser && userHasRole(currentUser, 'employee')) { %>
+<form class="card" action="/api/offices/empty-trigger" method="POST">
+  <h3>Report Empty Box</h3>
   <div class="row">
-    <label>Office
-      <select name="office" id="officeSelect" required>
-        <option value="Oslo">Oslo (Budget: 6,000 NOK)</option>
-        <option value="Bengaluru">Bengaluru (Budget: 15,000 INR)</option>
+    <label>Office / Region
+      <select name="office" required>
+        <option value="Oslo">Oslo</option>
+        <option value="Bengaluru">Bengaluru</option>
       </select>
     </label>
-    <label>Refill Date
-      <input type="date" name="refillDate" id="refillDateInput" value="<%= todayDate %>" required />
+    <label>Report Date
+      <input type="date" name="refillDate" value="<%= todayDate %>" required />
     </label>
     <label>Snack Box Product
-      <select name="productId" id="productSelect" onchange="syncProductPrice()" required>
-        <% if (products.length === 0) { %>
-          <option value="">-- No products available --</option>
-        <% } %>
+      <select name="productId" required>
         <% products.forEach(p => { %>
-          <option value="<%= p.id %>" data-name="<%= p.name %>" data-price="<%= p.unit_price %>"><%= p.name %> (<%= p.unit_price %> <%= p.currency %>)</option>
+          <option value="<%= p.id %>"><%= p.name %> (<%= p.unit_price %> <%= p.currency %>)</option>
         <% }) %>
       </select>
-    </label>
-    <label>Product Price (Unit Price)
-      <input type="number" step="0.01" name="productPrice" id="productPriceInput" required />
-    </label>
-    <label>Product Quantity
-      <input type="number" min="1" step="1" name="productQuantity" value="1" required />
-    </label>
-    <label>Refilling Volunteer
-      <select name="assigneeId" required>
-        <% if (volunteers.length === 0) { %>
-          <option value="">-- No volunteers registered --</option>
-        <% } %>
-        <% volunteers.forEach(v => { %>
-          <option value="<%= v.employee_id %>"><%= v.name %> (<%= v.employee_id %>)</option>
-        <% }) %>
-      </select>
-    </label>
-    <label>Upload Bill / Receipt Image
-      <input type="file" id="billImageFile" accept="image/*" onchange="encodeImageFileAsURL(this)" required />
     </label>
   </div>
-  <button type="submit">Submit Refill & Raise Claim</button>
+  <button type="submit" style="margin-top: 1rem;">Submit Trigger</button>
 </form>
+<% } %>
 
-<h2>All Snack Refill Claims & Status</h2>
+<h2>Open Empty Box Triggers</h2>
 <table>
   <thead>
     <tr>
-      <th>Refill ID</th>
-      <th>Refill Date</th>
-      <th>Office</th>
-      <th>Product</th>
-      <th>Volunteer</th>
-      <th>HR Claim ID</th>
-      <th>Ticket Status</th>
-      <th>Bill Attachment</th>
-      <th>HR Status (Manual Override)</th>
-      <th>Actions</th>
+      <th>Trigger ID</th>
+      <th>Region / Office</th>
+      <th>Product Box</th>
+      <th>Reported By</th>
+      <th>Date Raised</th>
+      <th>Status</th>
+      <% if (currentUser && userHasRole(currentUser, 'volunteer')) { %>
+        <th>Action</th>
+      <% } %>
     </tr>
   </thead>
   <tbody>
-    <% if (refills.length === 0) { %>
-      <tr><td colspan="10">No refill orders recorded yet.</td></tr>
+    <% if (triggers.length === 0) { %>
+      <tr><td colspan="<%= userHasRole(currentUser, 'volunteer') ? 7 : 6 %>">No open empty box triggers.</td></tr>
     <% } %>
-    <% refills.forEach(r => { %>
-      <tr class="refill-row" data-id="<%= r.id %>" data-office="<%= r.office %>" data-date="<%= r.refill_date %>" data-product="<%= r.product_name %>" data-product-id="<%= r.product_id %>">
-        <td><strong><%= r.id %></strong></td>
-        <td><%= r.refill_date %></td>
-        <td><%= r.office %></td>
-        <td><%= r.product_name || '-' %></td>
-        <td><%= r.assignee_name ? `${r.assignee_name} (${r.assignee_id})` : '-' %></td>
-        <td><%= r.hr_claim_id || '-' %></td>
-        <td><span class="badge" style="background: <%= r.status === 'OPEN' ? '#dcfce7' : '#e5e7eb' %>;"><%= r.status %></span></td>
-        <td>
-          <% if (r.receipt_image && r.receipt_image.startsWith('data:image')) { %>
-            <a href="javascript:void(0);" onclick="openImageModal('<%= r.receipt_image %>')" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
-              <img src="<%= r.receipt_image %>" alt="Bill Receipt" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1;" />
-              <span style="font-size: 0.8rem; color: #2563eb; font-weight: 600;">View</span>
-            </a>
-          <% } else { %>
-            <span style="color: #9ca3af; font-size: 0.85rem;">No image</span>
-          <% } %>
-        </td>
-        <td>
-          <% if (r.hr_claim_id) { %>
-            <form action="/api/refills/<%= r.id %>/hr-status" method="POST" style="display:inline;">
-              <select name="hrStatus" onchange="this.form.submit()" style="padding: 0.2rem; font-size: 0.8rem; background: <%= r.hr_status === 'APPROVED' || r.hr_status === 'REIMBURSED' ? '#dcfce7' : (r.hr_status === 'REJECTED' ? '#fee2e2' : '#fef9c3') %>;">
-                <option value="PENDING" <%= r.hr_status === 'PENDING' ? 'selected' : '' %>>PENDING</option>
-                <option value="APPROVED" <%= r.hr_status === 'APPROVED' ? 'selected' : '' %>>APPROVED</option>
-                <option value="REIMBURSED" <%= r.hr_status === 'REIMBURSED' ? 'selected' : '' %>>REIMBURSED</option>
-                <option value="REJECTED" <%= r.hr_status === 'REJECTED' ? 'selected' : '' %>>REJECTED</option>
-              </select>
+    <% triggers.forEach(t => { %>
+      <tr>
+        <td><strong>#<%= t.id %></strong></td>
+        <td><%= t.office %></td>
+        <td><%= t.product_name || '-' %></td>
+        <td><%= t.reporter_name %> (<%= t.reporter_id %>)</td>
+        <td><%= t.report_date %></td>
+        <td><span class="badge" style="background: #fef3c7; color: #b45309;"><%= t.status %></span></td>
+        <% if (currentUser && userHasRole(currentUser, 'volunteer')) { %>
+          <td>
+            <form action="/api/offices/claim-trigger" method="POST" style="display:flex; flex-direction:column; gap:0.4rem; background:#f9fafb; padding:0.5rem; border-radius:4px;" onsubmit="return handleFileConversion(event, this)">
+              <input type="hidden" name="triggerId" value="<%= t.id %>" />
+              <input type="hidden" name="office" value="<%= t.office %>" />
+              <input type="hidden" name="productId" value="<%= t.product_id %>" />
+              <input type="hidden" name="assigneeId" value="<%= currentUser.employeeId %>" />
+              <input type="hidden" name="receiptImage" id="receipt_hidden_<%= t.id %>" />
+              
+              <div style="display:flex; gap:0.5rem;">
+                <label style="font-size:0.75rem;">Qty: 
+                  <input type="number" name="productQuantity" value="1" min="1" required style="width:50px; padding:0.1rem;" />
+                </label>
+                <label style="font-size:0.75rem;">Price: 
+                  <input type="number" name="productPrice" value="500" step="0.01" min="0" required style="width:70px; padding:0.1rem;" />
+                </label>
+              </div>
+              <label style="font-size:0.75rem;">Upload Bill Receipt:
+                <input type="file" id="file_input_<%= t.id %>" accept="image/*" required style="width:100%; font-size:0.7rem;" />
+              </label>
+              <button type="submit" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; background:#2563eb; color:white; border:none; border-radius:3px; cursor:pointer;">Claim & Refill</button>
             </form>
-          <% } else { %>
-            -
-          <% } %>
-        </td>
-        <td>
-          <a href="/views/refills/<%= r.id %>" style="margin-right: 0.5rem; font-weight: 600; color: #2563eb; text-decoration: none;">View Ticket</a>
-          <% if (r.hr_claim_id && r.hr_status === 'PENDING') { %>
-            <form action="/api/hr/claims/<%= r.hr_claim_id %>/approve" method="POST" style="display:inline;">
-              <button type="submit" class="success" style="padding: 0.15rem 0.4rem; font-size: 0.75rem;">Approve</button>
-            </form>
-            <form action="/api/hr/claims/<%= r.hr_claim_id %>/reject" method="POST" style="display:inline;">
-              <button type="submit" class="danger" style="padding: 0.15rem 0.4rem; font-size: 0.75rem;">Reject</button>
-            </form>
-          <% } %>
-          <button type="button" class="danger" style="padding: 0.15rem 0.4rem; font-size: 0.75rem;" onclick="deleteRefill('<%= r.id %>')">Delete</button>
-        </td>
+          </td>
+        <% } %>
       </tr>
     <% }) %>
   </tbody>
 </table>
 
-<!-- Image Modal Lightbox Overlay -->
-<div id="imageModal" style="display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,0.85); align-items:center; justify-content:center;">
-  <div style="position:relative; max-width:80%; max-height:85%; text-align:center;">
-    <span onclick="closeImageModal()" style="position:absolute; top:-45px; right:0; color:#fff; font-size:40px; font-weight:bold; cursor:pointer;">&times;</span>
-    <img id="modalImageElement" style="max-width:100%; max-height:80vh; border-radius:6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);" />
-  </div>
-</div>
-
 <script>
-  function syncProductPrice() {
-    const sel = document.getElementById('productSelect');
-    const opt = sel.options[sel.selectedIndex];
-    const price = opt.getAttribute('data-price');
-    if (price) {
-      document.getElementById('productPriceInput').value = price;
-    }
-  }
-  window.addEventListener('DOMContentLoaded', syncProductPrice);
-
-  function encodeImageFileAsURL(element) {
-    const file = element.files[0];
-    if (file) {
+  function handleFileConversion(event, form) {
+    event.preventDefault();
+    const fileInput = form.querySelector('input[type="file"]');
+    const hiddenInput = form.querySelector('input[name="receiptImage"]');
+    
+    if (fileInput && fileInput.files && fileInput.files[0]) {
       const reader = new FileReader();
-      reader.onloadend = function() {
-        document.getElementById('receiptImageBase64').value = reader.result;
-      }
-      reader.readAsDataURL(file);
+      reader.onload = function(e) {
+        hiddenInput.value = e.target.result;
+        form.submit();
+      };
+      reader.onerror = function() {
+        alert('Error reading receipt file.');
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    } else {
+      alert('Please select a receipt image file.');
     }
-  }
-
-  function handleFormSubmit(event) {
-    const b64 = document.getElementById('receiptImageBase64').value;
-    if (!b64 || !b64.startsWith('data:image')) {
-      alert('Please wait for the bill image to finish loading or re-select your image file.');
-      event.preventDefault();
-      return false;
-    }
-
-    const selectedOffice = document.getElementById('officeSelect').value;
-    const selectedDate = document.getElementById('refillDateInput').value;
-    const productSel = document.getElementById('productSelect');
-    const selectedProductId = productSel.value;
-    const selectedProductName = productSel.options[productSel.selectedIndex].getAttribute('data-name');
-
-    const rows = document.querySelectorAll('.refill-row');
-    let duplicates = [];
-
-    rows.forEach(row => {
-      const rId = row.getAttribute('data-id');
-      const rOffice = row.getAttribute('data-office');
-      const rDate = row.getAttribute('data-date');
-      const rProdId = row.getAttribute('data-product-id');
-      const rProdName = row.getAttribute('data-product');
-
-      if (rOffice === selectedOffice && rDate === selectedDate && rProdId === selectedProductId) {
-        duplicates.push(`- Ticket ID: ${rId} | Product: ${rProdName} | Date: ${rDate} (${rOffice})`);
-      }
-    });
-
-    if (duplicates.length > 0) {
-      const message = `⚠️ Possible Duplicate Refill Detected!\n\nYou have already raised a ticket for "${selectedProductName}" in ${selectedOffice} on ${selectedDate}:\n\n` +
-                      duplicates.join('\n') + 
-                      `\n\nDo you still want to proceed and submit this duplicate refill ticket?`;
-      
-      if (!confirm(message)) {
-        event.preventDefault();
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  function openImageModal(base64Src) {
-    const modal = document.getElementById('imageModal');
-    const modalImg = document.getElementById('modalImageElement');
-    modalImg.src = base64Src;
-    modal.style.display = 'flex';
-  }
-
-  function closeImageModal() {
-    document.getElementById('imageModal').style.display = 'none';
-  }
-
-  window.onclick = function(event) {
-    const modal = document.getElementById('imageModal');
-    if (event.target === modal) {
-      closeImageModal();
-    }
-  }
-
-  async function deleteRefill(id) {
-    if (!confirm('Are you sure you want to delete refill ' + id + '?')) return;
-    const res = await fetch('/api/refills/' + id, {
-      method: 'DELETE',
-      headers: { 'Accept': 'application/json' }
-    });
-    if (res.ok) window.location = '/views/report-empty?message=Refill+order+cleared';
-    else alert((await res.json()).error);
+    return false;
   }
 </script>
+
+<p><a href="/">&larr; Back to Dashboard</a></p>
 
 <%- include('partials/footer') %>

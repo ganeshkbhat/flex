@@ -1,0 +1,35 @@
+<%- include('partials/header') %>
+
+<div style="max-width: 450px; margin: 3rem auto;">
+  <h1>My Profile & Security</h1>
+  <p>Manage your account settings and update your password.</p>
+
+  <% if (message) { %><div class="alert success"><%= message %></div><% } %>
+  <% if (error) { %><div class="alert error"><%= error %></div><% } %>
+
+  <div class="card" style="margin-bottom: 1.5rem;">
+    <p><strong>Employee ID:</strong> <%= employee.employee_id %></p>
+    <p><strong>Name:</strong> <%= employee.name %></p>
+    <p><strong>Email:</strong> <%= employee.email %></p>
+    <p><strong>Active Office:</strong> <%= employee.active_office %></p>
+    <p><strong>Assigned Roles:</strong> 
+      <% if (employee.is_admin) { %>Admin <% } %>
+      <% if (employee.is_hr) { %>HR <% } %>
+      <% if (employee.is_volunteer) { %>Volunteer <% } %>
+      <% if (!employee.is_admin && !employee.is_hr && !employee.is_volunteer) { %>Standard Employee<% } %>
+    </p>
+  </div>
+
+  <form class="card" action="/api/profile/password" method="POST">
+    <h3>Change Password</h3>
+    <label style="margin-top: 0.5rem;">Current Password
+      <input type="password" name="currentPassword" required />
+    </label>
+    <label style="margin-top: 0.75rem;">New Password
+      <input type="password" name="newPassword" required />
+    </label>
+    <button type="submit" style="margin-top: 1rem; width: 100%;">Update Password</button>
+  </form>
+</div>
+
+<%- include('partials/footer') %>
